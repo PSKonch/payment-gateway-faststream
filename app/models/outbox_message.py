@@ -10,6 +10,7 @@ from app.core.db import Base
 
 
 class OutboxMessageModel(Base):
+    __tablename__ = "outbox_message"
     __table_args__ = (Index("ix_outbox_messages_status_created_at", "status", "created_at"),)
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

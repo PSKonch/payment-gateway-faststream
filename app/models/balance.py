@@ -12,8 +12,10 @@ if TYPE_CHECKING:
 
 
 class BalanceModel(Base):
+    __tablename__ = "balance"
+
     merchant_id: Mapped[UUID] = mapped_column(
-        ForeignKey("merchant_model.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey("merchant.id", ondelete="CASCADE"), primary_key=True
     )
     amount: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     reserved_amount: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)

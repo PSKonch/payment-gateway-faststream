@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 
 class MerchantModel(Base):
+    __tablename__ = "merchant"
+
     __table_args__ = (
         Index("ix_merchant_is_active", "is_active"),
         Index("ix_merchant_deleted_at", "deleted_at"),
@@ -38,6 +40,8 @@ class MerchantModel(Base):
 
 
 class MerchantCredentialModel(Base):
+    __tablename__ = "merchant_credential"
+
     __table_args__ = (
         Index("ix_merchant_credential_merchant_id", "merchant_id"),
         Index("ix_merchant_credential_is_active", "is_active"),
@@ -45,7 +49,7 @@ class MerchantCredentialModel(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     merchant_id: Mapped[UUID] = mapped_column(
-        ForeignKey("merchant_model.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("merchant.id", ondelete="CASCADE"), nullable=False
     )
     api_key_prefix: Mapped[str] = mapped_column(unique=True, nullable=False)
     api_key_hash: Mapped[str] = mapped_column(nullable=False)

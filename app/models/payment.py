@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 class PaymentModel(Base):
+    __tablename__ = "payment"
     __table_args__ = (
         Index("ix_payments_merchant_id", "merchant_id"),
         Index("ix_payments_status", "status"),
@@ -20,7 +21,7 @@ class PaymentModel(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     merchant_id: Mapped[UUID] = mapped_column(
-        ForeignKey("merchant_model.id", ondelete="RESTRICT"), nullable=False
+        ForeignKey("merchant.id", ondelete="RESTRICT"), nullable=False
     )
     merchant_order_id: Mapped[str] = mapped_column(nullable=False)
     external_invoice_id: Mapped[str] = mapped_column(unique=True, nullable=False)
