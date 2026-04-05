@@ -52,7 +52,7 @@ class MessageConsumer:
 
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                async with message.process():
+                async with message.process(requeue=True):
                     try:
                         body = json.loads(message.body.decode())
                         routing_key = message.routing_key or ""

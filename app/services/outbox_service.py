@@ -8,10 +8,11 @@ class OutboxService:
     def __init__(self, uow: UnitOfWork) -> None:
         self.uow = uow
 
+    async def enqueue_event(self, topic: str, payload: dict[str, Any]) -> None:
+        await self.uow.outbox.create_message(topic=topic, payload=payload)
+
     async def create_event(self, topic: str, payload: dict[str, Any]) -> None:
-        async with self.uow as uow:
-            await uow.outbox.create_message(topic=topic, payload=payload)
-            await uow.commit()
+        await self.enqueue_event(topic, payload)
 
     async def get_pending_events(self, limit: int = 100) -> list[Any]:
         async with self.uow as uow:

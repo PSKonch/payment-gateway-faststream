@@ -1,5 +1,9 @@
 import asyncio
+import hashlib
+import hmac
+import json
 import logging
+import os
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
@@ -13,6 +17,10 @@ from provider.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _sign_payload(payload: bytes, secret: str) -> str:
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
 @dataclass
@@ -79,12 +87,23 @@ class ProviderService:
             external_invoice_id=payment.external_invoice_id,
             status=final_status,
         )
+        body = json.dumps(
+            callback_payload.model_dump(),
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+        webhook_secret = os.getenv("PROVIDER_WEBHOOK_SECRET", "change-me-provider-webhook-secret")
+        signature = _sign_payload(body, webhook_secret)
 
         async with aiohttp.ClientSession(timeout=self._timeout) as session:
             try:
                 async with session.post(
                     payment.callback_url,
-                    json=callback_payload.model_dump(),
+                    data=body,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Provider-Signature": signature,
+                    },
                 ) as response:
                     if response.status >= 400:
                         logger.warning(

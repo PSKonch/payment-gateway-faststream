@@ -28,6 +28,80 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: payment-gateway-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-gateway-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      BROKER_HOST: rabbitmq
+      REDIS_HOST: redis
+      PROVIDER_URL: http://provider:8001
+      WEBHOOK_BASE_URL: http://gateway:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      provider:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  outbox-publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-gateway-outbox-publisher
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      BROKER_HOST: rabbitmq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: ["python", "scripts/run_outbox_publisher.py"]
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-gateway-consumer
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      BROKER_HOST: rabbitmq
+      PROVIDER_URL: http://provider:8001
+      WEBHOOK_BASE_URL: http://gateway:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      provider:
+        condition: service_healthy
+    command: ["python", "scripts/run_consumer.py"]
+
   provider:
     build:
       context: .
@@ -37,6 +111,8 @@ services:
       - .env
     ports:
       - "8001:8001"
+    environment:
+      PROVIDER_WEBHOOK_SECRET: change-me-provider-webhook-secret
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s

@@ -1,10 +1,8 @@
-import asyncio
 from typing import Any
 
 import aiohttp
 
 from app.core.config import settings
-from app.core.enums import PaymentStatus, ProviderStatus
 
 
 class ProviderService:
@@ -18,11 +16,6 @@ class ProviderService:
         amount: str,
         callback_url: str,
     ) -> dict[str, Any] | None:
-        await asyncio.sleep(
-            settings.PROVIDER_DELAY_MIN
-            + (settings.PROVIDER_DELAY_MAX - settings.PROVIDER_DELAY_MIN) * 0.5
-        )
-
         url = f"{self.base_url}/api/v1/payments"
         payload = {
             "external_invoice_id": external_invoice_id,
@@ -38,12 +31,3 @@ class ProviderService:
                     return None
             except Exception:
                 return None
-
-    @staticmethod
-    def map_provider_status(status: str) -> PaymentStatus:
-        mapping: dict[str, PaymentStatus] = {
-            ProviderStatus.CREATED: PaymentStatus.PROCESSING,
-            ProviderStatus.COMPLETED: PaymentStatus.COMPLETED,
-            ProviderStatus.CANCELED: PaymentStatus.CANCELED,
-        }
-        return mapping.get(status, PaymentStatus.FAILED) or PaymentStatus.FAILED

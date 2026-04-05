@@ -43,12 +43,14 @@ class Settings(BaseSettings):
 
     PROVIDER_URL: str = "http://provider:8001"
     WEBHOOK_BASE_URL: str = "http://app:8000"
+    PROVIDER_WEBHOOK_SECRET: str = "change-me-provider-webhook-secret"
 
     PROVIDER_DELAY_MIN: float = 1.0
     PROVIDER_DELAY_MAX: float = 2.0
 
     ENCRYPTION_KEY: str = "change-me-in-production-32-chars!"
     API_KEY_PREFIX_LENGTH: int = 8
+    CACHE_TTL_SECONDS: int = 30
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

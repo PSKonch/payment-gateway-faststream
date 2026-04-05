@@ -1,8 +1,33 @@
 from collections.abc import Callable
+from contextlib import suppress
 from hashlib import sha256
 from typing import Any
 
 from fastapi import Request, Response
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis.asyncio import Redis  # type: ignore[import-untyped]
+
+from app.core.config import settings
+
+
+async def init_cache() -> Redis:
+    redis = Redis.from_url(settings.REDIS_URL, decode_responses=False)
+    await redis.ping()
+
+    FastAPICache.init(
+        RedisBackend(redis),
+        prefix="payment-gateway-cache",
+    )
+    return redis
+
+
+async def close_cache(redis: Redis | None) -> None:
+    if redis is None:
+        return
+
+    with suppress(Exception):
+        await redis.aclose()
 
 
 def merchant_cache_key_builder(

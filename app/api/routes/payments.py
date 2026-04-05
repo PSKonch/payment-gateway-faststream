@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_current_merchant_id, get_uow
 from app.api.schemas import PaymentCreateRequest, PaymentListResponse, PaymentResponse
-from app.core.config import settings
 from app.services import PaymentService
 from app.uow import UnitOfWork
 
@@ -19,13 +18,11 @@ async def create_payment(
     uow: UnitOfWork = Depends(get_uow),
 ) -> PaymentResponse:
     service = PaymentService(uow)
-    webhook_url = f"{settings.WEBHOOK_BASE_URL}/api/v1/webhooks/provider"
 
     payment = await service.create_payment(
         merchant_id=merchant_id,
         merchant_order_id=request.merchant_order_id,
         amount=request.amount,
-        webhook_url=webhook_url,
     )
 
     if not payment:
