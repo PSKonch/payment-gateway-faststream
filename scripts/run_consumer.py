@@ -12,6 +12,10 @@ from app.uow import UnitOfWork
 provider_service = ProviderService()
 
 
+def build_webhook_callback_url() -> str:
+    return f"{settings.WEBHOOK_BASE_URL}/api/v1/webhooks/provider"
+
+
 async def handle_payment_created(message: dict[str, object]) -> None:
     event = PaymentCreatedEvent.model_validate(message)
 
@@ -28,7 +32,7 @@ async def handle_payment_created(message: dict[str, object]) -> None:
         if payment.status != PaymentStatus.CREATED:
             return
 
-        callback_url = f"{settings.WEBHOOK_BASE_URL}/api/v1/webhooks/provider"
+        callback_url = build_webhook_callback_url()
         provider_result = await provider_service.create_payment(
             external_invoice_id=event.external_invoice_id,
             amount=f"{event.amount / 100:.2f}",

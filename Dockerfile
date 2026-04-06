@@ -5,10 +5,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY pyproject.toml README.md /app/
+COPY pyproject.toml README.md alembic.ini /app/
 COPY app /app/app
 COPY provider /app/provider
 COPY scripts /app/scripts
+COPY migrations /app/migrations
 
 RUN pip install --no-cache-dir --upgrade pip \
 	&& pip install --no-cache-dir . \

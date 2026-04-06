@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     API_KEY_PREFIX_LENGTH: int = 8
     CACHE_TTL_SECONDS: int = 30
 
+    AUTH_DEV_BYPASS_ENABLED: bool = True
+    AUTH_DEV_BYPASS_KEY_IDS: str = "devbypass001"
+    AUTH_DEV_BYPASS_MERCHANT_NAME: str = "Dev Bypass Merchant"
+    AUTH_DEV_BYPASS_API_KEY_ID: str = "devbypass001"
+    AUTH_DEV_BYPASS_SECRET: str = "dev-bypass-secret"
+    AUTH_DEV_BYPASS_BALANCE: int = 100000
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

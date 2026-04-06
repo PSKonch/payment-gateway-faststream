@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.db import async_session
 from app.models import BalanceModel, MerchantCredentialModel, MerchantModel
 from app.services import SignatureService
@@ -33,7 +34,24 @@ MERCHANTS: tuple[MerchantSeed, ...] = (
 )
 
 
+def get_seed_merchants() -> tuple[MerchantSeed, ...]:
+    merchants = list(MERCHANTS)
+    if settings.AUTH_DEV_BYPASS_ENABLED:
+        merchants.append(
+            MerchantSeed(
+                name=settings.AUTH_DEV_BYPASS_MERCHANT_NAME,
+                balance=settings.AUTH_DEV_BYPASS_BALANCE,
+                api_key_prefix=settings.AUTH_DEV_BYPASS_API_KEY_ID,
+                api_secret=settings.AUTH_DEV_BYPASS_SECRET,
+            )
+        )
+
+    return tuple(merchants)
+
+
 async def seed_merchant(seed: MerchantSeed) -> None:
+    api_key = f"{seed.api_key_prefix}:{seed.api_secret}"
+
     async with async_session() as session:
         result = await session.execute(select(MerchantModel).where(MerchantModel.name == seed.name))
         merchant = result.scalar_one_or_none()
@@ -59,7 +77,6 @@ async def seed_merchant(seed: MerchantSeed) -> None:
         existing_credential = credential_result.scalar_one_or_none()
 
         if existing_credential is None:
-            api_key = f"{seed.api_key_prefix}:{seed.api_secret}"
             api_key_hash = SignatureService.hash_api_key(api_key)
             secret_encrypted = SignatureService.encrypt_secret(seed.api_secret)
 
@@ -74,13 +91,10 @@ async def seed_merchant(seed: MerchantSeed) -> None:
             )
             await session.commit()
 
-            signature_for_get = SignatureService.sign_request(b"", seed.api_secret)
-
             print("Merchant credentials created")
             print(f"merchant_name: {seed.name}")
             print(f"x-api-key: {api_key}")
-            print(f"x-signature (for GET with empty body): {signature_for_get}")
-            print(f"secret (for signing request body): {seed.api_secret}")
+            print(f"secret (for request signing): {seed.api_secret}")
         else:
             await session.commit()
             print(f"Merchant already seeded: {seed.name}")
@@ -95,7 +109,7 @@ def main() -> None:
     _ = parse_args()
 
     async def run() -> None:
-        for seed in MERCHANTS:
+        for seed in get_seed_merchants():
             await seed_merchant(seed)
 
     asyncio.run(run())

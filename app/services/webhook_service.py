@@ -39,6 +39,16 @@ class WebhookService:
             ):
                 return True
 
+            if new_status == ProviderStatus.CREATED:
+                await payment_repo.update_status(
+                    payment.id,
+                    PaymentStatus.PROCESSING,
+                    provider_status=provider_status,
+                    provider_payment_id=payment.provider_payment_id or provider_payment_id,
+                )
+                await uow.commit()
+                return True
+
             if new_status == ProviderStatus.COMPLETED:
                 if await balance_repo.confirm_reservation(payment.merchant_id, payment.amount):
                     await payment_repo.update_status(

@@ -35,15 +35,36 @@ class SignatureService:
         return fernet.decrypt(encrypted.encode()).decode()
 
     @staticmethod
-    def sign_request(data: bytes, secret: str) -> str:
-        signature = hmac.new(
-            secret.encode(),
-            data,
-            hashlib.sha256,
-        ).hexdigest()
-        return signature
+    def body_sha256_hex(body: bytes) -> str:
+        return hashlib.sha256(body).hexdigest()
 
     @staticmethod
-    def verify_signature(data: bytes, signature: str, secret: str) -> bool:
-        expected = SignatureService.sign_request(data, secret)
+    def build_canonical_request(method: str, path: str, body: bytes) -> str:
+        normalized_method = method.upper()
+        normalized_path = path or "/"
+        body_sha = SignatureService.body_sha256_hex(body)
+        return f"{normalized_method}\\n{normalized_path}\\n{body_sha}"
+
+    @staticmethod
+    def sign_canonical_request(canonical_request: str, secret: str) -> str:
+        return hmac.new(
+            secret.encode(),
+            canonical_request.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+    @staticmethod
+    def sign_request(method: str, path: str, body: bytes, secret: str) -> str:
+        canonical_request = SignatureService.build_canonical_request(method, path, body)
+        return SignatureService.sign_canonical_request(canonical_request, secret)
+
+    @staticmethod
+    def verify_signature(
+        method: str,
+        path: str,
+        body: bytes,
+        signature: str,
+        secret: str,
+    ) -> bool:
+        expected = SignatureService.sign_request(method, path, body, secret)
         return hmac.compare_digest(expected, signature)

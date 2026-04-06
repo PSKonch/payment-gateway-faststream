@@ -1,9 +1,6 @@
 import asyncio
-import hashlib
-import hmac
 import json
 import logging
-import os
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
@@ -17,10 +14,6 @@ from provider.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _sign_payload(payload: bytes, secret: str) -> str:
-    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
 @dataclass
@@ -82,28 +75,17 @@ class ProviderService:
         final_status = self._resolve_final_status(payment)
         payment.status = final_status
 
-        callback_payload = ProviderWebhookPayload(
-            id=payment.id,
-            external_invoice_id=payment.external_invoice_id,
-            status=final_status,
+        _, body = self._build_webhook_data(
+            payment,
+            final_status,
         )
-        body = json.dumps(
-            callback_payload.model_dump(),
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode()
-        webhook_secret = os.getenv("PROVIDER_WEBHOOK_SECRET", "change-me-provider-webhook-secret")
-        signature = _sign_payload(body, webhook_secret)
 
         async with aiohttp.ClientSession(timeout=self._timeout) as session:
             try:
                 async with session.post(
                     payment.callback_url,
                     data=body,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Provider-Signature": signature,
-                    },
+                    headers={"Content-Type": "application/json"},
                 ) as response:
                     if response.status >= 400:
                         logger.warning(
@@ -113,6 +95,23 @@ class ProviderService:
                         )
             except Exception:
                 logger.exception("Provider callback request error for payment_id=%s", payment.id)
+
+    @staticmethod
+    def _build_webhook_data(
+        payment: ProviderPayment,
+        status: str,
+    ) -> tuple[ProviderWebhookPayload, bytes]:
+        callback_payload = ProviderWebhookPayload(
+            id=payment.id,
+            external_invoice_id=payment.external_invoice_id,
+            status=status,
+        )
+        body = json.dumps(
+            callback_payload.model_dump(),
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+        return callback_payload, body
 
     @staticmethod
     def _resolve_final_status(payment: ProviderPayment) -> str:

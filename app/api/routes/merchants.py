@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.services import WebhookService
 from app.uow import UnitOfWork
 
-router = APIRouter(prefix="/api/v1/merchants", tags=["merchants"])
+router = APIRouter(prefix="/api/v1", tags=["merchants"])
 
 
 @router.get("/me", response_model=MerchantProfileResponse)  # type: ignore[misc]
