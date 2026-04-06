@@ -1,0 +1,62 @@
+from datetime import datetime
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, Index, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.db import Base
+
+if TYPE_CHECKING:
+    from .balance import BalanceModel  # noqa: F401
+    from .payment import PaymentModel  # noqa: F401
+
+
+class MerchantModel(Base):
+    __tablename__ = "merchant"
+
+    __table_args__ = (
+        Index("ix_merchant_is_active", "is_active"),
+        Index("ix_merchant_deleted_at", "deleted_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    deleted_at: Mapped[datetime] = mapped_column(nullable=True)
+
+    balance = relationship(
+        "BalanceModel", back_populates="merchant", uselist=False, cascade="all, delete-orphan"
+    )
+    payments = relationship("PaymentModel", back_populates="merchant", cascade="all, delete-orphan")
+    credentials = relationship(
+        "MerchantCredentialModel", back_populates="merchant", cascade="all, delete-orphan"
+    )
+
+
+class MerchantCredentialModel(Base):
+    __tablename__ = "merchant_credential"
+
+    __table_args__ = (
+        Index("ix_merchant_credential_merchant_id", "merchant_id"),
+        Index("ix_merchant_credential_is_active", "is_active"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    merchant_id: Mapped[UUID] = mapped_column(
+        ForeignKey("merchant.id", ondelete="CASCADE"), nullable=False
+    )
+    api_key_prefix: Mapped[str] = mapped_column(unique=True, nullable=False)
+    api_key_hash: Mapped[str] = mapped_column(nullable=False)
+    secret_key_encrypted: Mapped[str] = mapped_column(nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    last_used_at: Mapped[datetime] = mapped_column(nullable=True)
+
+    merchant = relationship("MerchantModel", back_populates="credentials")
